@@ -17,11 +17,25 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
+        $user = auth()->user();
+        $pitchDecks = $user->pitchDecks()->orderBy('created_at', 'desc')->get();
+
+        $stats = [
+            'total' => $pitchDecks->count(),
+            'completed' => $pitchDecks->where('status', 'completed')->count(),
+            'processing' => $pitchDecks->whereIn('status', ['pending', 'processing'])->count(),
+            'failed' => $pitchDecks->where('status', 'failed')->count(),
+        ];
+
+        return Inertia::render('Dashboard', [
+            'pitchDecks' => $pitchDecks,
+            'stats' => $stats,
+        ]);
     })->name('dashboard');
 
     Route::get('/analyzer', [PitchDeckController::class, 'index'])->name('analyzer.index');
     Route::post('/analyzer/upload', [PitchDeckController::class, 'upload'])->name('analyzer.upload');
+    Route::get('/analyzer/pdf/{pitchDeck}', [PitchDeckController::class, 'streamPdf'])->name('analyzer.pdf');
 });
 
 Route::middleware('auth')->group(function () {

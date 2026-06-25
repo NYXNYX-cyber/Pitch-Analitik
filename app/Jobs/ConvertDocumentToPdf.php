@@ -9,14 +9,14 @@ class ConvertDocumentToPdf implements ShouldQueue
 {
     use Queueable;
 
-    protected string $filePath;
+    protected int $pitchDeckId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $filePath)
+    public function __construct(int $pitchDeckId)
     {
-        $this->filePath = $filePath;
+        $this->pitchDeckId = $pitchDeckId;
     }
 
     /**
@@ -24,22 +24,28 @@ class ConvertDocumentToPdf implements ShouldQueue
      */
     public function handle(): void
     {
-        if (!file_exists($this->filePath)) {
-            throw new \InvalidArgumentException("File tidak ditemukan: {$this->filePath}");
+        $pitchDeck = \App\Models\PitchDeck::findOrFail($this->pitchDeckId);
+        $filePath = storage_path('app/private/' . $pitchDeck->filename);
+
+        if (!file_exists($filePath)) {
+            $pitchDeck->update(['status' => 'failed']);
+            throw new \InvalidArgumentException("File tidak ditemukan: {$filePath}");
         }
 
-        $extension = strtolower(pathinfo($this->filePath, PATHINFO_EXTENSION));
+        $pitchDeck->update(['status' => 'processing']);
+
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
         if ($extension === 'pdf') {
-            return; // Sudah PDF, tidak perlu dikonversi
+            return;
         }
 
-        $outdir = dirname($this->filePath);
+        $outdir = dirname($filePath);
 
         // Menjalankan LibreOffice headless CLI via shell_exec
         $command = sprintf(
             'soffice --headless --convert-to pdf --outdir %s %s 2>&1',
             escapeshellarg($outdir),
-            escapeshellarg($this->filePath)
+            escapeshellarg($filePath)
         );
 
         $output = [];
@@ -47,7 +53,17 @@ class ConvertDocumentToPdf implements ShouldQueue
         exec($command, $output, $returnVar);
 
         if ($returnVar !== 0) {
+            $pitchDeck->update(['status' => 'failed']);
             throw new \RuntimeException("Gagal mengonversi dokumen ke PDF: " . implode("\n", $output));
         }
+
+        // Dapatkan nama file PDF yang dihasilkan
+        $newPdfName = pathinfo($filePath, PATHINFO_FILENAME) . '.pdf';
+        $newRelativePath = dirname($pitchDeck->filename) . '/' . $newPdfName;
+
+        // Perbarui record PitchDeck dengan path PDF baru
+        $pitchDeck->update([
+            'filename' => $newRelativePath,
+        ]);
     }
 }

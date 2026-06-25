@@ -9,9 +9,11 @@ class AnalyzePitchDeckJob implements ShouldQueue
 {
     use Queueable;
 
-    protected string $pdfPath;
+    protected int $pitchDeckId;
     protected string $firecrawlApiKey;
+    protected string $firecrawlUrl;
     protected string $qdrantUrl;
+    protected string $qdrantKey;
     protected string $vllmUrl;
     protected string $vllmKey;
     protected string $vllmModel;
@@ -19,11 +21,13 @@ class AnalyzePitchDeckJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(string $pdfPath)
+    public function __construct(int $pitchDeckId)
     {
-        $this->pdfPath = $pdfPath;
+        $this->pitchDeckId = $pitchDeckId;
         $this->firecrawlApiKey = config('services.firecrawl.key', '');
+        $this->firecrawlUrl = config('services.firecrawl.url', 'http://localhost:3002');
         $this->qdrantUrl = config('services.qdrant.url', 'http://localhost:6333');
+        $this->qdrantKey = config('services.qdrant.key', '');
         $this->vllmUrl = config('services.vllm.url', 'http://43.156.111.140:20128/v1');
         $this->vllmKey = config('services.vllm.key', '');
         $this->vllmModel = config('services.vllm.model', 'ag/gemini-3-flash-agent');
@@ -34,63 +38,77 @@ class AnalyzePitchDeckJob implements ShouldQueue
      */
     public function handle(): void
     {
-        if (!file_exists($this->pdfPath)) {
-            throw new \InvalidArgumentException("Berkas PDF tidak ditemukan: {$this->pdfPath}");
+        $pitchDeck = \App\Models\PitchDeck::findOrFail($this->pitchDeckId);
+        $pdfPath = storage_path('app/private/' . $pitchDeck->filename);
+
+        if (!file_exists($pdfPath)) {
+            $pitchDeck->update(['status' => 'failed']);
+            throw new \InvalidArgumentException("Berkas PDF tidak ditemukan: {$pdfPath}");
         }
 
-        // 1. Ekstrak halaman PDF menjadi gambar menggunakan pdftoppm (CLI utility Linux)
-        $outputDir = storage_path('app/pitchdeck_pages/' . uniqid());
-        if (!is_dir($outputDir)) {
-            mkdir($outputDir, 0755, true);
-        }
+        $pitchDeck->update(['status' => 'processing']);
 
-        $command = sprintf(
-            'pdftoppm -png -r 150 %s %s/page',
-            escapeshellarg($this->pdfPath),
-            escapeshellarg($outputDir)
-        );
-        exec($command, $output, $returnVar);
-
-        if ($returnVar !== 0) {
-            throw new \RuntimeException("Gagal mengonversi halaman PDF ke gambar.");
-        }
-
-        $images = glob($outputDir . '/page-*.png');
-        sort($images);
-
-        $results = [];
-
-        foreach ($images as $index => $imagePath) {
-            $pageNum = $index + 1;
-
-            // 2. Kirim gambar ke vLLM API (Qwen2.5-VL) untuk dianalisis
-            $analysisResult = $this->analyzeImageWithVllm($imagePath);
-
-            // 3. Jika ada kompetitor yang terdeteksi, perkaya informasi menggunakan Firecrawl API
-            $competitors = $analysisResult['competitors'] ?? [];
-            $enrichedCompetitors = [];
-            foreach ($competitors as $competitor) {
-                $enrichedCompetitors[] = $this->enrichCompetitorData($competitor);
+        try {
+            // 1. Ekstrak halaman PDF menjadi gambar menggunakan pdftoppm (CLI utility Linux)
+            $outputDir = storage_path('app/pitchdeck_pages/' . uniqid());
+            if (!is_dir($outputDir)) {
+                mkdir($outputDir, 0755, true);
             }
 
-            // 4. Integrasikan dengan Qdrant DB (RAG matching untuk benchmarking)
-            $vectorResult = $this->matchCompetitorEmbeddingWithQdrant($analysisResult);
+            $command = sprintf(
+                'pdftoppm -png -r 150 %s %s/page',
+                escapeshellarg($pdfPath),
+                escapeshellarg($outputDir)
+            );
+            exec($command, $output, $returnVar);
 
-            $results[$pageNum] = [
-                'analysis' => $analysisResult,
-                'competitors_enriched' => $enrichedCompetitors,
-                'benchmarks' => $vectorResult,
-            ];
+            if ($returnVar !== 0) {
+                throw new \RuntimeException("Gagal mengonversi halaman PDF ke gambar.");
+            }
+
+            $images = glob($outputDir . '/page-*.png');
+            sort($images);
+
+            $results = [];
+
+            foreach ($images as $index => $imagePath) {
+                $pageNum = $index + 1;
+
+                // 2. Kirim gambar ke vLLM API (Qwen2.5-VL) untuk dianalisis
+                $analysisResult = $this->analyzeImageWithVllm($imagePath);
+
+                // 3. Jika ada kompetitor yang terdeteksi, perkaya informasi menggunakan Firecrawl API
+                $competitors = $analysisResult['competitors'] ?? [];
+                $enrichedCompetitors = [];
+                foreach ($competitors as $competitor) {
+                    $enrichedCompetitors[] = $this->enrichCompetitorData($competitor);
+                }
+
+                // 4. Integrasikan dengan Qdrant DB (RAG matching untuk benchmarking)
+                $vectorResult = $this->matchCompetitorEmbeddingWithQdrant($analysisResult);
+
+                $results[$pageNum] = [
+                    'analysis' => $analysisResult,
+                    'competitors_enriched' => $enrichedCompetitors,
+                    'benchmarks' => $vectorResult,
+                ];
+            }
+
+            // Hapus file gambar temporer
+            foreach ($images as $img) {
+                @unlink($img);
+            }
+            @rmdir($outputDir);
+
+            // Simpan hasil ke database
+            $pitchDeck->update([
+                'status' => 'completed',
+                'results' => $results,
+            ]);
+        } catch (\Exception $e) {
+            $pitchDeck->update(['status' => 'failed']);
+            throw $e;
         }
-
-        // Hapus file gambar temporer
-        foreach ($images as $img) {
-            @unlink($img);
-        }
-        @rmdir($outputDir);
-
-        // Simpan hasil ke cache / database / trigger event
-        // E.g., Cache::put('analysis_' . basename($this->pdfPath), $results, 3600);
     }
 
     protected function analyzeImageWithVllm(string $imagePath): array
@@ -139,16 +157,11 @@ class AnalyzePitchDeckJob implements ShouldQueue
 
     protected function enrichCompetitorData(string $competitorName): array
     {
-        if (empty($this->firecrawlApiKey)) {
-            return ['name' => $competitorName, 'details' => 'Kunci API Firecrawl tidak diatur.'];
-        }
-
         // Gunakan Firecrawl API untuk melakukan search/scrape data terbaru kompetitor
-        $response = \Illuminate\Support\Facades\Http::withToken($this->firecrawlApiKey)
-            ->post('https://api.firecrawl.dev/v1/scrape', [
-                'url' => "https://www.google.com/search?q=" . urlencode($competitorName),
-                'formats' => ['markdown'],
-            ]);
+        $response = \Illuminate\Support\Facades\Http::post("{$this->firecrawlUrl}/v1/scrape", [
+            'url' => "https://www.google.com/search?q=" . urlencode($competitorName),
+            'formats' => ['markdown'],
+        ]);
 
         if ($response->failed()) {
             return ['name' => $competitorName, 'details' => 'Gagal mengambil data kompetitor.'];
@@ -162,12 +175,18 @@ class AnalyzePitchDeckJob implements ShouldQueue
 
     protected function matchCompetitorEmbeddingWithQdrant(array $analysis): array
     {
+        $headers = [];
+        if (!empty($this->qdrantKey)) {
+            $headers['api-key'] = $this->qdrantKey;
+        }
+
         // Panggil endpoint search vector Qdrant DB
-        $response = \Illuminate\Support\Facades\Http::post("{$this->qdrantUrl}/collections/pitchdecks/points/search", [
-            'vector' => array_fill(0, 768, 0.0), // Placeholder vector, sesuaikan dengan embedding yang digunakan di backend Anda
-            'limit' => 3,
-            'with_payload' => true,
-        ]);
+        $response = \Illuminate\Support\Facades\Http::withHeaders($headers)
+            ->post("{$this->qdrantUrl}/collections/pitchdecks/points/search", [
+                'vector' => array_fill(0, 768, 0.0), // Placeholder vector, sesuaikan dengan embedding yang digunakan di backend Anda
+                'limit' => 3,
+                'with_payload' => true,
+            ]);
 
         if ($response->failed()) {
             return [];

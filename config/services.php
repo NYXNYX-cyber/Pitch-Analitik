@@ -37,10 +37,12 @@ return [
 
     'firecrawl' => [
         'key' => env('FIRECRAWL_API_KEY'),
+        'url' => env('FIRECRAWL_URL', 'http://localhost:3002'),
     ],
 
     'qdrant' => [
         'url' => env('QDRANT_URL', 'http://localhost:6333'),
+        'key' => env('QDRANT_KEY'),
     ],
 
     'vllm' => [

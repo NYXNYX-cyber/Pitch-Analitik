@@ -45,4 +45,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function pitchDecks()
+    {
+        return $this->hasMany(PitchDeck::class);
+    }
 }
