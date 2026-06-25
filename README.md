@@ -45,11 +45,11 @@ docker compose up -d
 Pastikan port `3002` (API) dan `6379` (Redis) terhubung dengan host lokal.
 
 ### 3. Isi Kredensial API (`.env`)
-Buka berkas `.env` dan tambahkan variabel berikut:
+Buka berkas `.env` dan tambahkan variabel berikut (sesuaikan dengan API key milik Anda):
 ```env
-VLLM_URL=http://43.156.111.140:20128/v1
-QDRANT_URL=https://f4c49278-c471-4dbf-b1e0-77e4003e647d.australia-southeast1-0.gcp.cloud.qdrant.io
-QDRANT_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIiwic3ViamVjdCI6ImFwaS1rZXk6NTIyMjI2ODMtZDM4ZS00YWY4LTlkMzEtNzUzYmRkYWRkNGMzIn0.q2p-LncNXrhr9ryyuJxTyAg-mZU3P9W7fdJyty8N74U
+VLLM_URL=http://your-vllm-endpoint/v1
+QDRANT_URL=https://your-qdrant-cloud-url.io
+QDRANT_KEY=your_qdrant_api_key_here
 FIRECRAWL_URL=http://localhost:3002
 QUEUE_CONNECTION=redis
 ```
