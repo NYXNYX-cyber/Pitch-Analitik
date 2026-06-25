@@ -44,7 +44,7 @@ return [
     ],
 
     'vllm' => [
-        'url' => env('VLLM_URL', 'http://localhost:8000'),
+        'url' => env('VLLM_URL', 'http://43.156.111.140:20128/v1'),
     ],
 
 ];

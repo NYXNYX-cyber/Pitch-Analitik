@@ -93,7 +93,7 @@ class AnalyzePitchDeckJob implements ShouldQueue
     {
         $base64Image = base64_encode(file_get_contents($imagePath));
 
-        $response = \Illuminate\Support\Facades\Http::timeout(60)->post("{$this->vllmUrl}/v1/chat/completions", [
+        $response = \Illuminate\Support\Facades\Http::timeout(60)->post("{$this->vllmUrl}/chat/completions", [
             'model' => 'Qwen/Qwen2.5-VL-7B-Instruct',
             'messages' => [
                 [
