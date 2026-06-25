@@ -75,6 +75,29 @@ class PitchDeckController extends Controller
         return back()->with('status', 'Proses audit berhasil dibatalkan.');
     }
 
+    public function destroy(\App\Models\PitchDeck $pitchDeck)
+    {
+        if ($pitchDeck->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        // Hapus file fisik dari private storage jika ada
+        $filePath = storage_path('app/private/' . $pitchDeck->filename);
+        if (file_exists($filePath)) {
+            @unlink($filePath);
+        }
+
+        // Jika sebelumnya ada docx asli, hapus berkas docx tersebut juga
+        $docxPath = preg_replace('/\.pdf$/i', '.docx', $filePath);
+        if (file_exists($docxPath)) {
+            @unlink($docxPath);
+        }
+
+        $pitchDeck->delete();
+
+        return redirect()->route('analyzer.index')->with('status', 'Riwayat audit dokumen berhasil dihapus.');
+    }
+
     public function upload(Request $request)
     {
         $request->validate([

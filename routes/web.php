@@ -36,6 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/analyzer', [PitchDeckController::class, 'index'])->name('analyzer.index');
     Route::post('/analyzer/upload', [PitchDeckController::class, 'upload'])->name('analyzer.upload');
     Route::post('/analyzer/{pitchDeck}/cancel', [PitchDeckController::class, 'cancel'])->name('analyzer.cancel');
+    Route::delete('/analyzer/{pitchDeck}', [PitchDeckController::class, 'destroy'])->name('analyzer.destroy');
     Route::get('/analyzer/pdf/{pitchDeck}', [PitchDeckController::class, 'streamPdf'])->name('analyzer.pdf');
 });
 

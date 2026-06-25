@@ -3,7 +3,7 @@ import { Head, useForm, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AnalysisCard from '@/Components/AnalysisCard';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { ChevronLeft, ChevronRight, Upload, Loader2, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload, Loader2, FileText, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
 
 // Setup worker untuk PDF.js
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -158,31 +158,51 @@ export default function Analyzer({ auth, status, pitchDecks = [], activeDeck, pd
                                     <span className="text-neo-charcoal/50 italic py-4 text-center">Belum ada riwayat.</span>
                                 ) : (
                                     pitchDecks.map((deck) => (
-                                        <Link
+                                        <div
                                             key={deck.id}
-                                            href={route('analyzer.index', { id: deck.id })}
-                                            className={`p-3 border-2 border-neo-charcoal flex flex-col gap-1 transition ${
-                                                activeDeck?.id === deck.id
-                                                    ? 'bg-neo-orange text-white shadow-neo'
-                                                    : 'bg-neo-sand/20 hover:bg-neo-sand/40'
-                                            }`}
+                                            className="relative group"
                                         >
-                                            <span className="font-bold truncate">{deck.original_name}</span>
-                                            <div className="flex justify-between items-center mt-1">
-                                                <span className={`text-[10px] px-1.5 py-0.5 border border-neo-charcoal font-bold uppercase ${
-                                                    deck.status === 'completed'
-                                                        ? 'bg-neo-teal text-white'
-                                                        : deck.status === 'failed'
-                                                        ? 'bg-neo-crimson text-white'
-                                                        : 'bg-yellow-400 text-neo-charcoal animate-pulse'
-                                                }`}>
-                                                    {deck.status === 'completed' ? 'Selesai' : deck.status === 'failed' ? 'Gagal' : 'Proses'}
-                                                </span>
-                                                <span className="text-[9px] opacity-80">
-                                                    {new Date(deck.created_at).toLocaleDateString('id-ID')}
-                                                </span>
-                                            </div>
-                                        </Link>
+                                            <Link
+                                                href={route('analyzer.index', { id: deck.id })}
+                                                className={`p-3 pr-10 border-2 border-neo-charcoal flex flex-col gap-1 transition block ${
+                                                    activeDeck?.id === deck.id
+                                                        ? 'bg-neo-orange text-white shadow-neo'
+                                                        : 'bg-neo-sand/20 hover:bg-neo-sand/40 font-neo-charcoal'
+                                                }`}
+                                            >
+                                                <span className="font-bold truncate block">{deck.original_name}</span>
+                                                <div className="flex justify-between items-center mt-1">
+                                                    <span className={`text-[10px] px-1.5 py-0.5 border border-neo-charcoal font-bold uppercase ${
+                                                        deck.status === 'completed'
+                                                            ? 'bg-neo-teal text-white'
+                                                            : deck.status === 'failed'
+                                                            ? 'bg-neo-crimson text-white'
+                                                            : 'bg-yellow-400 text-neo-charcoal animate-pulse'
+                                                    }`}>
+                                                        {deck.status === 'completed' ? 'Selesai' : deck.status === 'failed' ? 'Gagal' : 'Proses'}
+                                                    </span>
+                                                    <span className="text-[9px] opacity-80">
+                                                        {new Date(deck.created_at).toLocaleDateString('id-ID')}
+                                                    </span>
+                                                </div>
+                                            </Link>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (confirm('Apakah Anda yakin ingin menghapus riwayat audit dokumen ini? Tindakan ini permanen.')) {
+                                                        router.delete(route('analyzer.destroy', { pitchDeck: deck.id }));
+                                                    }
+                                                }}
+                                                className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 border border-neo-charcoal bg-white text-neo-crimson hover:bg-neo-crimson hover:text-white transition shadow-neo-sm ${
+                                                    activeDeck?.id === deck.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                                                }`}
+                                                title="Hapus Riwayat"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
                                     ))
                                 )}
                             </div>
