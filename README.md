@@ -1,66 +1,83 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Pitch Deck Diagnostic Audit (PDA)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Platform diagnostik otomatis untuk menilai kesiapan investasi dokumen pitch deck startup menggunakan model AI vision multimodal dan database vektor.
 
-## About Laravel
+## Fitur Utama
+* **Konversi Dokumen Otomatis**: Mendukung unggahan berkas `.docx` dan konversi ke `.pdf` secara asinkron menggunakan LibreOffice headless.
+* **Analisis Multimodal AI**: Menggunakan vLLM dengan model **Qwen2.5-VL** untuk memindai dokumen halaman demi halaman.
+* **Scraping Real-Time**: Integrasi **Firecrawl API** untuk memperkaya data kompetitor yang terdeteksi di slide deck secara otomatis dari web.
+* **Semantic RAG Match**: Menggunakan **Qdrant Vector DB** untuk melakukan pencocokan dan tolok ukur (*benchmarking*) kompetitor secara semantik.
+* **UI/UX Neo-Brutalis**: Antarmuka kontras tinggi menggunakan font *Syne* & *Space Mono*, *split-screen editor*, dan visual penampil PDF tersinkronisasi.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Prasyarat Sistem
+* PHP >= 8.2
+* Composer
+* Node.js & NPM
+* Redis Server (untuk Laravel Horizon queue)
+* LibreOffice (untuk konversi berkas `.docx`)
+* API Key Firecrawl, vLLM Server, dan Qdrant DB Instance.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Langkah Instalasi & Pengujian
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 1. Kloning & Persiapan Environment
+```bash
+# Buat database SQLite kosong
+touch database/database.sqlite
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+# Salin berkas environment
+cp .env.example .env
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# Jalankan migrasi basis data
+php artisan migrate
+```
 
-## Laravel Sponsors
+### 2. Isi Kredensial API (`.env`)
+Buka berkas `.env` dan tambahkan variabel berikut:
+```env
+FIRECRAWL_API_KEY=ghp_...
+QDRANT_URL=http://localhost:6333
+VLLM_URL=http://localhost:8000
+QUEUE_CONNECTION=redis
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 3. Jalankan Aplikasi
+Jalankan skrip otomatis untuk menyalakan Laravel, Vite, dan Horizon sekaligus:
+```bash
+./run-all.sh
+```
+Arahkan browser Anda ke `http://127.0.0.1:8000`.
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## Peta Jalan (Roadmap Project)
 
-## Contributing
+### Fase 1: Dasar & Antrean (Selesai)
+* [x] Inisialisasi Laravel 11 + Breeze Inertia React.
+* [x] Integrasi antrean Horizon Redis.
+* [x] Job konversi dokumen LibreOffice.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Fase 2: Pipeline Analitik AI (Selesai)
+* [x] Pemisahan slide PDF ke PNG.
+* [x] Integrasi API vLLM (Qwen2.5-VL) & JSON parsing.
+* [x] Web scraping kompetitor via Firecrawl API.
+* [x] Integrasi semantic search Qdrant DB.
 
-## Code of Conduct
+### Fase 3: Antarmuka Neo-Brutalis (Selesai)
+* [x] Implementasi UI/UX Neo-Brutalis dengan Tailwind CSS.
+* [x] Split-view penampil PDF menggunakan `react-pdf`.
+* [x] Sinkronisasi data analisis halaman demi halaman.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Fase 4: Pengayaan & Produksi (Mendatang)
+* [ ] Ekspor hasil audit diagnostik ke PDF ringkasan.
+* [ ] Dashboard analitik riwayat audit kolektif.
+* [ ] Multi-tenant dan kolaborasi tim.
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Lisensi
 
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Aplikasi ini dilisensikan di bawah **Apache License 2.0**. Silakan lihat berkas `LICENSE` untuk detail selengkapnya.

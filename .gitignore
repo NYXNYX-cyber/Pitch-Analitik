@@ -22,3 +22,12 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Gitignore tambahan untuk keamanan kredensial dan database lokal
+database/database.sqlite
+storage/app/pitchdecks/*
+storage/app/pitchdeck_pages/*
+storage/app/private/pitchdecks/*
+!storage/app/pitchdecks/.gitignore
+!storage/app/pitchdeck_pages/.gitignore
+!storage/app/private/pitchdecks/.gitignore
