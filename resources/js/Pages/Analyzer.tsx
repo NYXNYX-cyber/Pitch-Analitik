@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AnalysisCard from '@/Components/AnalysisCard';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -265,10 +265,12 @@ export default function Analyzer({ auth, status, pitchDecks = [], activeDeck, pd
                                         <div className="bg-white border-4 border-neo-charcoal p-6 shadow-neo-lg flex flex-col items-center text-center gap-4">
                                             <AlertCircle size={48} className="text-neo-crimson" />
                                             <h4 className="font-sans text-lg font-black uppercase text-neo-crimson">
-                                                Analisis Gagal
+                                                {activeDeck.results?.cancelled ? 'Audit Dibatalkan' : 'Analisis Gagal'}
                                             </h4>
                                             <p className="font-sans text-sm font-medium">
-                                                Kami mengalami kendala saat memproses dokumen ini. Silakan coba unggah kembali berkas Anda atau pastikan berkas tidak rusak.
+                                                {activeDeck.results?.cancelled
+                                                    ? 'Proses audit dokumen ini telah dibatalkan secara manual oleh pengguna.'
+                                                    : 'Kami mengalami kendala saat memproses dokumen ini. Silakan coba unggah kembali berkas Anda atau pastikan berkas tidak rusak.'}
                                             </p>
                                         </div>
                                     ) : (
@@ -283,6 +285,17 @@ export default function Analyzer({ auth, status, pitchDecks = [], activeDeck, pd
                                             <span className="font-mono text-xs bg-neo-sand border border-neo-charcoal px-3 py-1.5 font-bold uppercase animate-pulse">
                                                 Status: {activeDeck.status.toUpperCase()}
                                             </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (confirm('Apakah Anda yakin ingin membatalkan proses audit ini?')) {
+                                                        router.post(route('analyzer.cancel', { pitchDeck: activeDeck.id }));
+                                                    }
+                                                }}
+                                                className="mt-2 bg-neo-crimson text-white border-4 border-neo-charcoal px-4 py-2 font-sans text-xs font-bold uppercase tracking-wider shadow-neo hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 transition"
+                                            >
+                                                Hentikan Audit
+                                            </button>
                                         </div>
                                     )
                                 ) : (

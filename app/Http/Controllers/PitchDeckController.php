@@ -58,6 +58,23 @@ class PitchDeckController extends Controller
         ]);
     }
 
+    public function cancel(\App\Models\PitchDeck $pitchDeck)
+    {
+        if ($pitchDeck->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        // Jika dokumen masih diproses, batalkan
+        if (in_array($pitchDeck->status, ['pending', 'processing'])) {
+            $pitchDeck->update([
+                'status' => 'failed',
+                'results' => ['cancelled' => true]
+            ]);
+        }
+
+        return back()->with('status', 'Proses audit berhasil dibatalkan.');
+    }
+
     public function upload(Request $request)
     {
         $request->validate([

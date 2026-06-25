@@ -72,6 +72,17 @@ class AnalyzePitchDeckJob implements ShouldQueue
             $results = [];
 
             foreach ($images as $index => $imagePath) {
+                // Cek apakah audit dibatalkan oleh pengguna di tengah jalan
+                $pitchDeck->refresh();
+                if ($pitchDeck->status === 'failed' && isset($pitchDeck->results['cancelled'])) {
+                    // Bersihkan berkas temporer sebelum keluar
+                    foreach ($images as $img) {
+                        @unlink($img);
+                    }
+                    @rmdir($outputDir);
+                    return;
+                }
+
                 $pageNum = $index + 1;
 
                 // 2. Kirim gambar ke vLLM API (Qwen2.5-VL) untuk dianalisis
