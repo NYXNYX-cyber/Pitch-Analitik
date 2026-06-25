@@ -106,6 +106,7 @@ class AnalyzePitchDeckJob implements ShouldQueue
             ->timeout(60)
             ->post("{$this->vllmUrl}/chat/completions", [
                 'model' => $this->vllmModel,
+                'stream' => false,
                 'messages' => [
                     [
                         'role' => 'user',
