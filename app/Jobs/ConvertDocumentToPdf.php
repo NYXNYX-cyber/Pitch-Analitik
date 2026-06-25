@@ -32,10 +32,11 @@ class ConvertDocumentToPdf implements ShouldQueue
             throw new \InvalidArgumentException("File tidak ditemukan: {$filePath}");
         }
 
-        $pitchDeck->update(['status' => 'processing']);
+        $pitchDeck->update(['status' => 'processing', 'progress' => 5]);
 
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
         if ($extension === 'pdf') {
+            $pitchDeck->update(['progress' => 10]);
             return;
         }
 
@@ -53,7 +54,7 @@ class ConvertDocumentToPdf implements ShouldQueue
         exec($command, $output, $returnVar);
 
         if ($returnVar !== 0) {
-            $pitchDeck->update(['status' => 'failed']);
+            $pitchDeck->update(['status' => 'failed', 'progress' => 0]);
             throw new \RuntimeException("Gagal mengonversi dokumen ke PDF: " . implode("\n", $output));
         }
 
@@ -64,6 +65,7 @@ class ConvertDocumentToPdf implements ShouldQueue
         // Perbarui record PitchDeck dengan path PDF baru
         $pitchDeck->update([
             'filename' => $newRelativePath,
+            'progress' => 10,
         ]);
     }
 }

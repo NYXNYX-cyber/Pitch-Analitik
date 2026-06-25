@@ -13,6 +13,7 @@ interface PitchDeck {
     filename: string;
     original_name: string;
     status: string;
+    progress: number;
     results: any;
     created_at: string;
 }
@@ -40,6 +41,26 @@ export default function Analyzer({ auth, status, pitchDecks = [], activeDeck, pd
         setPageNumber(1);
         setNumPages(null);
     }, [pdfUrl, activeDeck]);
+
+    // Efek untuk polling status dokumen jika masih pending/processing
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        const hasActiveProcessing = pitchDecks.some(
+            (deck) => deck.status === 'pending' || deck.status === 'processing'
+        );
+
+        if (hasActiveProcessing) {
+            interval = setInterval(() => {
+                router.reload({
+                    only: ['pitchDecks', 'activeDeck', 'pdfUrl']
+                });
+            }, 3000);
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [pitchDecks]);
 
     const { data, setData, post, processing, errors, setError, clearErrors } = useForm({
         document: null as File | null,
@@ -86,7 +107,7 @@ export default function Analyzer({ auth, status, pitchDecks = [], activeDeck, pd
     }
 
     // Ambil data analisis halaman aktif
-    const activePageAnalysis = activeDeck?.results?.[pageNumber] || null;
+    const activePageAnalysis = activeDeck?.results?.[pageNumber.toString()] || activeDeck?.results?.[pageNumber] || null;
 
     return (
         <AuthenticatedLayout
@@ -179,7 +200,7 @@ export default function Analyzer({ auth, status, pitchDecks = [], activeDeck, pd
                                                             ? 'bg-neo-crimson text-white'
                                                             : 'bg-yellow-400 text-neo-charcoal animate-pulse'
                                                     }`}>
-                                                        {deck.status === 'completed' ? 'Selesai' : deck.status === 'failed' ? 'Gagal' : 'Proses'}
+                                                        {deck.status === 'completed' ? 'Selesai' : deck.status === 'failed' ? 'Gagal' : `Proses: ${deck.progress || 0}%`}
                                                     </span>
                                                     <span className="text-[9px] opacity-80">
                                                         {new Date(deck.created_at).toLocaleDateString('id-ID')}
@@ -209,7 +230,7 @@ export default function Analyzer({ auth, status, pitchDecks = [], activeDeck, pd
                         </div>
 
                         {/* Split View Analyzer (Kanan) */}
-                        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="lg:col-span-3 flex flex-col gap-8">
                             {/* Panel PDF */}
                             <div className="bg-white border-4 border-neo-charcoal p-6 shadow-neo-lg flex flex-col items-center">
                                 <div className="border-b-4 border-neo-charcoal pb-4 mb-4 w-full flex justify-between items-center">
@@ -238,7 +259,7 @@ export default function Analyzer({ auth, status, pitchDecks = [], activeDeck, pd
                                                 pageNumber={pageNumber}
                                                 renderTextLayer={false}
                                                 renderAnnotationLayer={false}
-                                                width={350}
+                                                width={750}
                                             />
                                         </Document>
                                     ) : (
@@ -273,63 +294,73 @@ export default function Analyzer({ auth, status, pitchDecks = [], activeDeck, pd
                                 )}
                             </div>
 
-                            {/* Panel Analisis */}
-                            <div className="flex flex-col gap-6">
-                                {activeDeck ? (
-                                    activeDeck.status === 'completed' ? (
-                                        <AnalysisCard
-                                            pageNumber={pageNumber}
-                                            data={activePageAnalysis}
-                                        />
-                                    ) : activeDeck.status === 'failed' ? (
-                                        <div className="bg-white border-4 border-neo-charcoal p-6 shadow-neo-lg flex flex-col items-center text-center gap-4">
-                                            <AlertCircle size={48} className="text-neo-crimson" />
-                                            <h4 className="font-sans text-lg font-black uppercase text-neo-crimson">
-                                                {activeDeck.results?.cancelled ? 'Audit Dibatalkan' : 'Analisis Gagal'}
-                                            </h4>
-                                            <p className="font-sans text-sm font-medium">
-                                                {activeDeck.results?.cancelled
-                                                    ? 'Proses audit dokumen ini telah dibatalkan secara manual oleh pengguna.'
-                                                    : 'Kami mengalami kendala saat memproses dokumen ini. Silakan coba unggah kembali berkas Anda atau pastikan berkas tidak rusak.'}
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-white border-4 border-neo-charcoal p-6 shadow-neo-lg flex flex-col items-center text-center gap-4">
-                                            <Loader2 size={48} className="animate-spin text-neo-orange" />
-                                            <h4 className="font-sans text-lg font-black uppercase text-neo-orange">
-                                                Dokumen Sedang Diproses
-                                            </h4>
-                                            <p className="font-sans text-sm font-medium">
-                                                Kecerdasan Buatan kami sedang melakukan ekstraksi halaman, analisis visual mendalam, penelusuran kompetitor, dan benchmarking data secara asinkron.
-                                            </p>
-                                            <span className="font-mono text-xs bg-neo-sand border border-neo-charcoal px-3 py-1.5 font-bold uppercase animate-pulse">
-                                                Status: {activeDeck.status.toUpperCase()}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    if (confirm('Apakah Anda yakin ingin membatalkan proses audit ini?')) {
-                                                        router.post(route('analyzer.cancel', { pitchDeck: activeDeck.id }));
-                                                    }
-                                                }}
-                                                className="mt-2 bg-neo-crimson text-white border-4 border-neo-charcoal px-4 py-2 font-sans text-xs font-bold uppercase tracking-wider shadow-neo hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 transition"
-                                            >
-                                                Hentikan Audit
-                                            </button>
-                                        </div>
-                                    )
-                                ) : (
-                                    <div className="bg-white border-4 border-neo-charcoal p-6 shadow-neo-lg flex flex-col items-center text-center gap-4 py-16">
-                                        <FileText size={48} className="text-neo-charcoal/50" />
-                                        <h4 className="font-sans text-lg font-black uppercase text-neo-charcoal/60">
-                                            Belum Ada Dokumen
+                            {/* Pindahkan bagian rendering <AnalysisCard /> untuk diletakkan langsung di bawah panel penampil PDF */}
+                            {activeDeck && activeDeck.status === 'completed' && (
+                                <AnalysisCard
+                                    pageNumber={pageNumber}
+                                    data={activePageAnalysis}
+                                />
+                            )}
+
+                            {/* Panel Status/Analisis Lainnya */}
+                            {activeDeck ? (
+                                activeDeck.status === 'failed' ? (
+                                    <div className="bg-white border-4 border-neo-charcoal p-6 shadow-neo-lg flex flex-col items-center text-center gap-4">
+                                        <AlertCircle size={48} className="text-neo-crimson" />
+                                        <h4 className="font-sans text-lg font-black uppercase text-neo-crimson">
+                                            {activeDeck.results?.cancelled ? 'Audit Dibatalkan' : 'Analisis Gagal'}
                                         </h4>
-                                        <p className="font-sans text-sm font-medium text-neo-charcoal/60">
-                                            Silakan pilih dokumen dari riwayat audit di sebelah kiri atau unggah berkas baru melalui panel di atas.
+                                        <p className="font-sans text-sm font-medium">
+                                            {activeDeck.results?.cancelled
+                                                ? 'Proses audit dokumen ini telah dibatalkan secara manual oleh pengguna.'
+                                                : 'Kami mengalami kendala saat memproses dokumen ini. Silakan coba unggah kembali berkas Anda atau pastikan berkas tidak rusak.'}
                                         </p>
                                     </div>
-                                )}
-                            </div>
+                                ) : activeDeck.status !== 'completed' ? (
+                                    <div className="bg-white border-4 border-neo-charcoal p-6 shadow-neo-lg flex flex-col items-center text-center gap-4">
+                                        <Loader2 size={48} className="animate-spin text-neo-orange" />
+                                        <h4 className="font-sans text-lg font-black uppercase text-neo-orange">
+                                            Dokumen Sedang Diproses
+                                        </h4>
+                                        <div className="w-full bg-neo-sand border-2 border-neo-charcoal h-6 relative mt-2">
+                                            <div
+                                                className="bg-neo-orange h-full border-r border-neo-charcoal transition-all duration-500"
+                                                style={{ width: `${activeDeck.progress || 0}%` }}
+                                            />
+                                            <span className="absolute inset-0 flex items-center justify-center font-mono text-xs font-bold text-neo-charcoal">
+                                                {activeDeck.progress || 0}%
+                                            </span>
+                                        </div>
+                                        <p className="font-sans text-sm font-medium">
+                                            Kecerdasan Buatan kami sedang melakukan ekstraksi halaman, analisis visual mendalam, penelusuran kompetitor, dan benchmarking data secara asinkron.
+                                        </p>
+                                        <span className="font-mono text-xs bg-neo-sand border border-neo-charcoal px-3 py-1.5 font-bold uppercase animate-pulse">
+                                            Status: {activeDeck.status.toUpperCase()}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (confirm('Apakah Anda yakin ingin membatalkan proses audit ini?')) {
+                                                    router.post(route('analyzer.cancel', { pitchDeck: activeDeck.id }));
+                                                }
+                                            }}
+                                            className="mt-2 bg-neo-crimson text-white border-4 border-neo-charcoal px-4 py-2 font-sans text-xs font-bold uppercase tracking-wider shadow-neo hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 transition"
+                                        >
+                                            Hentikan Audit
+                                        </button>
+                                    </div>
+                                ) : null
+                            ) : (
+                                <div className="bg-white border-4 border-neo-charcoal p-6 shadow-neo-lg flex flex-col items-center text-center gap-4 py-16">
+                                    <FileText size={48} className="text-neo-charcoal/50" />
+                                    <h4 className="font-sans text-lg font-black uppercase text-neo-charcoal/60">
+                                        Belum Ada Dokumen
+                                    </h4>
+                                    <p className="font-sans text-sm font-medium text-neo-charcoal/60">
+                                        Silakan pilih dokumen dari riwayat audit di sebelah kiri atau unggah berkas baru melalui panel di atas.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

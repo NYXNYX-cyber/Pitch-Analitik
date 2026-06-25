@@ -12,6 +12,7 @@ class PitchDeck extends Model
         'filename',
         'original_name',
         'status',
+        'progress',
         'results',
     ];
 
