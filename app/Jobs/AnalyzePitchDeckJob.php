@@ -13,6 +13,8 @@ class AnalyzePitchDeckJob implements ShouldQueue
     protected string $firecrawlApiKey;
     protected string $qdrantUrl;
     protected string $vllmUrl;
+    protected string $vllmKey;
+    protected string $vllmModel;
 
     /**
      * Create a new job instance.
@@ -22,7 +24,9 @@ class AnalyzePitchDeckJob implements ShouldQueue
         $this->pdfPath = $pdfPath;
         $this->firecrawlApiKey = config('services.firecrawl.key', '');
         $this->qdrantUrl = config('services.qdrant.url', 'http://localhost:6333');
-        $this->vllmUrl = config('services.vllm.url', 'http://localhost:8000');
+        $this->vllmUrl = config('services.vllm.url', 'http://43.156.111.140:20128/v1');
+        $this->vllmKey = config('services.vllm.key', '');
+        $this->vllmModel = config('services.vllm.model', 'ag/gemini-3-flash-agent');
     }
 
     /**
@@ -93,27 +97,34 @@ class AnalyzePitchDeckJob implements ShouldQueue
     {
         $base64Image = base64_encode(file_get_contents($imagePath));
 
-        $response = \Illuminate\Support\Facades\Http::timeout(60)->post("{$this->vllmUrl}/chat/completions", [
-            'model' => 'Qwen/Qwen2.5-VL-7B-Instruct',
-            'messages' => [
-                [
-                    'role' => 'user',
-                    'content' => [
-                        [
-                            'type' => 'text',
-                            'text' => 'Analisis slide pitch deck ini. Identifikasi komponen bisnis, metrik keuangan, dan daftar kompetitor yang disebutkan. Kembalikan respons murni berformat JSON dengan skema: {"summary": "...", "metrics": {"burn_rate": "...", "revenue": "..."}, "competitors": ["NamaCompetitor1", "NamaCompetitor2"]}',
-                        ],
-                        [
-                            'type' => 'image_url',
-                            'image_url' => [
-                                'url' => "data:image/png;base64,{$base64Image}",
+        $headers = [];
+        if (!empty($this->vllmKey)) {
+            $headers['Authorization'] = 'Bearer ' . $this->vllmKey;
+        }
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders($headers)
+            ->timeout(60)
+            ->post("{$this->vllmUrl}/chat/completions", [
+                'model' => $this->vllmModel,
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            [
+                                'type' => 'text',
+                                'text' => 'Analisis slide pitch deck ini. Identifikasi komponen bisnis, metrik keuangan, dan daftar kompetitor yang disebutkan. Kembalikan respons murni berformat JSON dengan skema: {"summary": "...", "metrics": {"burn_rate": "...", "revenue": "..."}, "competitors": ["NamaCompetitor1", "NamaCompetitor2"]}',
+                            ],
+                            [
+                                'type' => 'image_url',
+                                'image_url' => [
+                                    'url' => "data:image/png;base64,{$base64Image}",
+                                ],
                             ],
                         ],
                     ],
                 ],
-            ],
-            'response_format' => ['type' => 'json_object'],
-        ]);
+                'response_format' => ['type' => 'json_object'],
+            ]);
 
         if ($response->failed()) {
             return ['summary' => 'Gagal menganalisis slide ini.', 'metrics' => [], 'competitors' => []];

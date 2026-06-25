@@ -45,6 +45,8 @@ return [
 
     'vllm' => [
         'url' => env('VLLM_URL', 'http://43.156.111.140:20128/v1'),
+        'key' => env('VLLM_KEY', 'sk-7c385384dc41adf3-8s0uu8-02500fae'),
+        'model' => env('VLLM_MODEL', 'ag/gemini-3-flash-agent'),
     ],
 
 ];
