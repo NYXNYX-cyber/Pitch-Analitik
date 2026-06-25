@@ -50,7 +50,9 @@
       "Bash(ls -lh /home/nyx/Documents/WebsiteAnailitik/*.pdf)",
       "Bash(sudo -S sed -i 's/upload_max_filesize = 2M/upload_max_filesize = 50M/' /etc/php/php.ini)",
       "Bash(sudo -S sed -i 's/post_max_size = 8M/post_max_size = 50M/' /etc/php/php.ini)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(sqlite3:*)",
+      "Bash(kill:*)"
     ]
   }
 }

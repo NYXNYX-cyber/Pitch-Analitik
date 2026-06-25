@@ -4,6 +4,8 @@
 cleanup() {
     echo -e "\n\n[+] Menghentikan semua proses..."
     kill $SERVE_PID $DEV_PID $HORIZON_PID 2>/dev/null
+    # Cari proses anak tersisa dari horizon atau server jika ada
+    pkill -P $$ 2>/dev/null
     exit 0
 }
 

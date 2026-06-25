@@ -24,13 +24,13 @@ class AnalyzePitchDeckJob implements ShouldQueue
     public function __construct(int $pitchDeckId)
     {
         $this->pitchDeckId = $pitchDeckId;
-        $this->firecrawlApiKey = config('services.firecrawl.key', '');
-        $this->firecrawlUrl = config('services.firecrawl.url', 'http://localhost:3002');
-        $this->qdrantUrl = config('services.qdrant.url', 'http://localhost:6333');
-        $this->qdrantKey = config('services.qdrant.key', '');
-        $this->vllmUrl = config('services.vllm.url', 'http://43.156.111.140:20128/v1');
-        $this->vllmKey = config('services.vllm.key', '');
-        $this->vllmModel = config('services.vllm.model', 'ag/gemini-3-flash-agent');
+        $this->firecrawlApiKey = config('services.firecrawl.key') ?? '';
+        $this->firecrawlUrl = config('services.firecrawl.url') ?? 'http://localhost:3002';
+        $this->qdrantUrl = config('services.qdrant.url') ?? 'http://localhost:6333';
+        $this->qdrantKey = config('services.qdrant.key') ?? '';
+        $this->vllmUrl = config('services.vllm.url') ?? 'http://43.156.111.140:20128/v1';
+        $this->vllmKey = config('services.vllm.key') ?? '';
+        $this->vllmModel = config('services.vllm.model') ?? 'ag/gemini-3-flash-agent';
     }
 
     /**
