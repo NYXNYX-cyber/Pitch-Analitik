@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "WebSearch",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(php -v)",
+      "Bash(composer --version)",
+      "Bash(composer create-project:*)",
+      "Bash(cp -r laravel-temp/. .)",
+      "Bash(composer config:*)",
+      "Bash(rm:*)",
+      "Bash(composer require:*)",
+      "Bash(php artisan:*)",
+      "Bash(npm install:*)",
+      "Bash(composer install:*)",
+      "Bash(npm run:*)",
+      "Bash(chmod +x run-all.sh)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
